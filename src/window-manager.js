@@ -182,6 +182,16 @@ export class WindowManager extends Emitter {
   }
 
   saveLayout(slot) {
+    // Flush any in-progress drag so transform is baked into left/top
+    if (this._dragState) {
+      const d = this._dragState;
+      d.el.style.left = (d.origX + (d.tx || 0)) + 'px';
+      d.el.style.top = (d.origY + (d.ty || 0)) + 'px';
+      d.el.style.transform = '';
+      d.el.classList.remove(`${this._pfx}-win-dragging`);
+      this._dragState = null;
+    }
+
     const snap = {};
     for (const [id, w] of Object.entries(this._windows)) {
       const el = w.el;
@@ -202,6 +212,7 @@ export class WindowManager extends Emitter {
     for (const [id, info] of Object.entries(snap)) {
       const w = this._windows[id];
       if (!w) continue;
+      w.el.style.transform = '';
       Object.assign(w.el.style, { left: info.left, top: info.top, width: info.width });
       if (info.height) w.el.style.height = info.height;
       if (info.zIndex) w.el.style.zIndex = info.zIndex;

@@ -55,6 +55,7 @@
     <button onclick="toggleArrow()">Toggle Arrows</button>
     <button onclick="cycleTheme()">Cycle Theme</button>
     <button onclick="connectWS()">Connect WS</button>
+    <button onclick="saveAll()">Save All Layouts</button>
   </div>`;
 
   // ── Seed data ──
@@ -89,6 +90,9 @@
     ],
     zones: [{ from: 85, to: 100, className: 'mt-red' }],
   });
+
+  // ── Save default layout so slot 1 is always available ──
+  wm.saveLayout(1);
 
   // ── Welcome modal ──
   modal.show(`
@@ -138,6 +142,11 @@
   window.cycleTheme = () => {
     themeIdx = (themeIdx + 1) % themeNames.length;
     applyTheme(themeNames[themeIdx]);
+  };
+
+  window.saveAll = () => {
+    for (let i = 1; i <= 5; i++) wm.saveLayout(i);
+    log.push({ text: 'All 5 layout slots saved', type: 'good', timestamp: new Date().toLocaleTimeString() });
   };
 
   // ── WebSocket demo ──
