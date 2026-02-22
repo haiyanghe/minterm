@@ -1,0 +1,400 @@
+/* minterm — DOS-style windowing CSS
+   All classes prefixed mt-. Retheme via CSS custom properties. */
+
+:root {
+  /* ── Colors ── */
+  --mt-accent: #0aa;
+  --mt-accent-bright: #0ff;
+  --mt-bg: #0a0a0a;
+  --mt-border: #0aa;
+  --mt-green: #0f0;
+  --mt-red: #f44;
+  --mt-yellow: #ff0;
+  --mt-cyan: #0ff;
+  --mt-magenta: #f0f;
+  --mt-orange: #f80;
+  --mt-white: #fff;
+  --mt-dim: #666;
+  --mt-text: #ccc;
+
+  /* ── Typography ── */
+  --mt-font: 'Courier New', 'Consolas', monospace;
+  --mt-font-size: 15px;
+
+  /* ── Titlebar ── */
+  --mt-titlebar-bg: var(--mt-accent);
+  --mt-titlebar-fg: #000;
+  --mt-titlebar-padding: 3px 8px;
+
+  /* ── Window chrome ── */
+  --mt-win-min-w: 200px;
+  --mt-win-min-h: 60px;
+  --mt-win-padding: 6px 8px;
+  --mt-glow: rgba(0, 170, 170, 0.12);
+  --mt-glow-strong: rgba(0, 170, 170, 0.3);
+
+  /* ── Scrollbar ── */
+  --mt-scrollbar-track: var(--mt-bg);
+  --mt-scrollbar-thumb: var(--mt-accent);
+  --mt-scrollbar-width: 6px;
+
+  /* ── Animation speeds ── */
+  --mt-ticker-speed: 8s;         /* base ticker scroll duration */
+  --mt-bar-speed: 0.8s;          /* activity bar pulse cycle */
+  --mt-arrow-dash-speed: 1.2s;   /* arrow dash animation */
+  --mt-arrow-dot-speed: 1.5s;    /* arrow traveling dot pulse */
+
+  /* ── Sizing ── */
+  --mt-bar-width: 3px;           /* activity bar column width */
+  --mt-bar-height: 28px;         /* activity bars container height */
+  --mt-resize-handle: 16px;      /* resize grip size */
+  --mt-pb-height: 32px;         /* price bar height */
+}
+
+/* ─── Color utilities ────────────────────────────────────────── */
+.mt-cyan    { color: var(--mt-cyan); }
+.mt-yellow  { color: var(--mt-yellow); }
+.mt-white   { color: var(--mt-white); }
+.mt-green   { color: var(--mt-green); }
+.mt-red     { color: var(--mt-red); }
+.mt-magenta { color: var(--mt-magenta); }
+.mt-dim     { color: var(--mt-dim); }
+.mt-orange  { color: var(--mt-orange); }
+
+/* ─── Window ─────────────────────────────────────────────────── */
+.mt-win {
+  position: fixed;
+  background: var(--mt-bg);
+  border: 1px solid var(--mt-border);
+  font-family: var(--mt-font);
+  font-size: var(--mt-font-size);
+  box-shadow: 0 0 12px var(--mt-glow), 0 0 2px var(--mt-glow-strong);
+  display: flex;
+  flex-direction: column;
+  min-width: var(--mt-win-min-w);
+  min-height: var(--mt-win-min-h);
+  overflow: hidden;
+  color: var(--mt-text);
+  contain: layout style;
+}
+
+.mt-win-dragging { will-change: transform; }
+
+.mt-win-titlebar {
+  background: var(--mt-titlebar-bg);
+  color: var(--mt-titlebar-fg);
+  padding: var(--mt-titlebar-padding);
+  cursor: grab;
+  font-weight: bold;
+  font-size: var(--mt-font-size);
+  user-select: none;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.mt-win-title { pointer-events: none; flex: 1; }
+
+.mt-win-lock {
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: auto;
+  color: inherit;
+  opacity: 0.35;
+  transition: opacity 0.15s, color 0.15s;
+  display: inline-flex;
+  align-items: center;
+}
+.mt-win-lock svg { display: block; transition: transform 0.15s; }
+.mt-win-lock-hidden { display: none; }
+.mt-win-lock:hover { opacity: 0.8; }
+.mt-win-locked .mt-win-lock { opacity: 1; color: var(--mt-accent-bright); filter: drop-shadow(0 0 3px var(--mt-accent)); }
+.mt-win-locked .mt-win-lock svg { transform: rotate(-45deg); }
+.mt-win-locked .mt-win-titlebar { cursor: default; }
+.mt-win-locked .mt-win-resize { display: none; }
+
+.mt-win-close {
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 14px;
+}
+.mt-win-close:hover { background: var(--mt-red); color: var(--mt-white); }
+
+.mt-win-body {
+  padding: var(--mt-win-padding);
+  overflow: auto;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: var(--mt-scrollbar-thumb) var(--mt-scrollbar-track);
+}
+.mt-win-body::-webkit-scrollbar { width: var(--mt-scrollbar-width); }
+.mt-win-body::-webkit-scrollbar-track { background: var(--mt-scrollbar-track); }
+.mt-win-body::-webkit-scrollbar-thumb { background: var(--mt-scrollbar-thumb); border-radius: 3px; }
+.mt-win-body::-webkit-scrollbar-thumb:hover { background: var(--mt-accent-bright); }
+
+.mt-win-resize {
+  position: absolute;
+  right: 0; bottom: 0;
+  width: var(--mt-resize-handle); height: var(--mt-resize-handle);
+  cursor: nwse-resize;
+  background:
+    linear-gradient(135deg,
+      transparent 50%, var(--mt-accent) 50%, var(--mt-accent) 58%, transparent 58%,
+      transparent 66%, var(--mt-accent) 66%, var(--mt-accent) 74%, transparent 74%,
+      transparent 82%, var(--mt-accent) 82%, var(--mt-accent) 90%, transparent 90%);
+  opacity: 0.5;
+}
+.mt-win-resize:hover { opacity: 1; }
+
+/* ─── Ticker ─────────────────────────────────────────────────── */
+.mt-ticker-wrap {
+  overflow: hidden;
+  white-space: nowrap;
+  border-bottom: 1px solid color-mix(in srgb, var(--mt-accent) 25%, transparent);
+  padding: 3px 0;
+  margin-bottom: 2px;
+  font-size: 11px;
+  position: relative;
+  mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 8%, #000 92%, transparent);
+}
+
+.mt-ticker-track {
+  display: inline-block;
+  animation: mt-tickerScroll var(--ticker-duration, var(--mt-ticker-speed)) linear infinite;
+  will-change: transform;
+}
+.mt-ticker-track:hover { animation-play-state: paused; }
+
+.mt-ticker-item { display: inline-block; margin-right: 16px; }
+.mt-ticker-label { color: var(--mt-white); }
+
+@keyframes mt-tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* ─── Activity Bars ──────────────────────────────────────────── */
+.mt-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: var(--mt-bar-height);
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+
+.mt-bar {
+  width: var(--mt-bar-width);
+  border-radius: 1px 1px 0 0;
+  animation: mt-barPulse var(--mt-bar-speed) ease-in-out infinite alternate;
+  transform-origin: bottom;
+  will-change: transform;
+}
+.mt-bar:nth-child(2) { animation-duration: 0.65s; animation-delay: 0.08s; }
+.mt-bar:nth-child(3) { animation-duration: 0.9s; animation-delay: 0.18s; }
+.mt-bar:nth-child(4) { animation-duration: 0.55s; animation-delay: 0.25s; }
+.mt-bar:nth-child(5) { animation-duration: 0.75s; animation-delay: 0.12s; }
+.mt-bar:nth-child(6) { animation-duration: 0.6s; animation-delay: 0.32s; }
+.mt-bar:nth-child(7) { animation-duration: 0.85s; animation-delay: 0.05s; }
+.mt-bar:nth-child(8) { animation-duration: 0.7s; animation-delay: 0.2s; }
+
+@keyframes mt-barPulse {
+  0%   { transform: scaleY(1); }
+  25%  { transform: scaleY(0.4); }
+  50%  { transform: scaleY(0.85); }
+  75%  { transform: scaleY(0.3); }
+  100% { transform: scaleY(1); }
+}
+
+/* ─── Price Bar ──────────────────────────────────────────────── */
+.mt-pb {
+  height: var(--mt-pb-height);
+  position: relative;
+  margin: 2px 0;
+  cursor: crosshair;
+}
+
+.mt-pb-track {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: var(--mt-bg);
+  border: 1px solid #222;
+  overflow: hidden;
+}
+
+.mt-pb-fill {
+  position: absolute;
+  top: 0; bottom: 0;
+  pointer-events: none;
+}
+
+.mt-pb-marker {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  z-index: 2;
+}
+
+.mt-pb-line {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 0; width: 2px;
+  background: var(--mt-accent);
+}
+
+.mt-pb-label {
+  position: absolute;
+  top: -1px; left: 4px;
+  font-size: 9px;
+  white-space: nowrap;
+  line-height: 32px;
+  color: var(--mt-accent);
+}
+
+.mt-pb-current .mt-pb-line { background: var(--mt-white); width: 3px; }
+.mt-pb-current .mt-pb-label { color: var(--mt-white); font-weight: bold; font-size: 10px; }
+
+.mt-pb-danger .mt-pb-line { background: var(--mt-red); }
+.mt-pb-danger .mt-pb-label { color: var(--mt-red); }
+
+.mt-pb-ghost {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.mt-pb-ghost-line {
+  position: absolute;
+  top: 0; bottom: 0;
+  left: 0; width: 1px;
+  border-left: 1px dashed var(--mt-dim);
+}
+
+.mt-pb-ghost-label {
+  position: absolute;
+  top: 1px; left: 6px;
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+  line-height: 14px;
+  text-shadow: 0 0 4px #000, 0 0 8px #000;
+}
+
+/* ─── Chart Canvas ───────────────────────────────────────────── */
+.mt-chart-canvas {
+  font-family: var(--mt-font);
+  font-size: 11px;
+  line-height: 1.1;
+  letter-spacing: 0;
+  margin: 0; padding: 0;
+  color: var(--mt-dim);
+  overflow: hidden;
+}
+
+/* ─── Message Log ────────────────────────────────────────────── */
+.mt-message { padding: 1px 0; color: #aaa; }
+
+/* ─── Arrow Overlay ──────────────────────────────────────────── */
+.mt-arrow-svg {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+  overflow: visible;
+}
+
+.mt-arrow-line {
+  animation: mt-arrowDash var(--mt-arrow-dash-speed) linear infinite;
+}
+
+@keyframes mt-arrowDash {
+  0%   { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: -20; }
+}
+
+.mt-arrow-dot {
+  animation: mt-arrowDotPulse var(--mt-arrow-dot-speed) ease-in-out infinite;
+}
+
+@keyframes mt-arrowDotPulse {
+  0%, 100% { opacity: 1; r: 3; }
+  50%      { opacity: 0.5; r: 5; }
+}
+
+.mt-arrow-label {
+  font-family: var(--mt-font);
+  font-size: 10px;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: #000;
+  stroke-width: 3px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ─── Modal ──────────────────────────────────────────────────── */
+.mt-modal-body { margin: 6px 0; }
+.mt-modal-footer { display: flex; gap: 8px; margin-top: 8px; justify-content: center; }
+
+.mt-btn {
+  font-family: var(--mt-font);
+  font-size: 12px;
+  background: var(--mt-bg);
+  color: var(--mt-accent-bright);
+  border: 1px solid var(--mt-accent);
+  padding: 4px 12px;
+  cursor: pointer;
+}
+.mt-btn:hover { background: var(--mt-accent); color: var(--mt-titlebar-fg); }
+
+.mt-input {
+  font-family: var(--mt-font);
+  font-size: 12px;
+  background: var(--mt-bg);
+  color: var(--mt-accent-bright);
+  border: 1px solid var(--mt-accent);
+  padding: 4px 8px;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 4px;
+}
+.mt-input:focus { outline: none; border-color: var(--mt-accent-bright); }
+
+/* ─── Layout Bar ─────────────────────────────────────────────── */
+.mt-layout-bar {
+  position: fixed;
+  top: 6px; left: 40px;
+  z-index: 999999;
+  display: flex; gap: 4px;
+  font-family: var(--mt-font);
+  font-size: 11px;
+  user-select: none;
+}
+
+.mt-layout-slot {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px;
+  border: 1px solid var(--mt-dim);
+  color: var(--mt-dim);
+  background: var(--mt-bg);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mt-layout-slot:hover { border-color: var(--mt-accent); color: var(--mt-accent); }
+
+.mt-layout-saved {
+  border-color: var(--mt-accent);
+  color: var(--mt-accent-bright);
+  text-shadow: 0 0 4px var(--mt-accent);
+}
+.mt-layout-saved:hover { background: var(--mt-accent); color: var(--mt-titlebar-fg); text-shadow: none; }
+
+@keyframes mt-layoutFlash {
+  0%, 100% { background: var(--mt-bg); }
+  50% { background: var(--mt-accent); color: var(--mt-titlebar-fg); }
+}
+.mt-layout-flash { animation: mt-layoutFlash 0.3s ease 2; }

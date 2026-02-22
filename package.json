@@ -1,0 +1,40 @@
+{
+  "name": "minterm",
+  "version": "0.1.0",
+  "description": "Minimal DOS-style windowing UI — zero deps, rAF-batched widgets, data adapters",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./css": "./css/minterm.css"
+  },
+  "files": [
+    "index.js",
+    "src/",
+    "css/",
+    "LICENSE"
+  ],
+  "sideEffects": ["./css/minterm.css"],
+  "scripts": {
+    "lint": "eslint src/ index.js",
+    "lint:fix": "eslint src/ index.js --fix",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "jsdom": "^25.0.0",
+    "vitest": "^3.0.0"
+  },
+  "keywords": ["terminal", "retro", "ui", "windowing", "dos", "widgets", "minterm"],
+  "author": "haiyanghe",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/haiyanghe/minterm.git"
+  },
+  "homepage": "https://github.com/haiyanghe/minterm#readme",
+  "bugs": {
+    "url": "https://github.com/haiyanghe/minterm/issues"
+  },
+  "license": "Unlicense"
+}

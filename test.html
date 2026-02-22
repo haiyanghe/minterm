@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>minterm demo</title>
+  <link rel="stylesheet" href="css/minterm.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;700&family=Share+Tech+Mono&family=Fira+Code:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap">
+  <style>
+    body { margin: 0; background: #000; font-family: var(--mt-font, 'Courier New', monospace); }
+    .ctrl-grid { display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; }
+    .ctrl-grid button {
+      font-family: inherit; font-size: 12px;
+      background: var(--mt-bg, #0a0a0a); color: var(--mt-accent-bright, #0ff);
+      border: 1px solid var(--mt-accent, #0aa);
+      padding: 4px 10px; cursor: pointer;
+    }
+    .ctrl-grid button:hover { background: var(--mt-accent, #0aa); color: var(--mt-titlebar-fg, #000); }
+  </style>
+</head>
+<body>
+
+
+<script type="module">
+  import { WindowManager, ModalManager, ArrowOverlay, applyTheme, formatNum,
+           Ticker, MiniChart, MessageLog, ActivityBars, RangeBar,
+           WebSocketAdapter } from './index.js';
+
+  // ── Setup ──
+  const wm = new WindowManager({ layoutBar: true, lockable: true });
+  const modal = new ModalManager(wm);
+  const arrows = new ArrowOverlay(wm);
+
+  // ── Widgets ──
+  const ticker = wm.addWidget('ticker', Ticker, {},
+    { x: 20, y: 20, width: 500, title: 'Ticker', closable: true, lockable: true });
+
+  const bars = wm.addWidget('bars', ActivityBars, {},
+    { x: 540, y: 20, width: 160, height: 80, title: 'Activity', closable: true, lockable: true });
+
+  const chart = wm.addWidget('chart', MiniChart, { width: 55, height: 12 },
+    { x: 20, y: 110, width: 500, height: 280, title: 'Sparkline', closable: true, lockable: true });
+
+  const log = wm.addWidget('messages', MessageLog, {},
+    { x: 540, y: 110, width: 400, height: 280, title: 'Log', closable: true, lockable: true });
+
+  const rb = wm.addWidget('rangebar', RangeBar, { formatLabel: formatNum },
+    { x: 20, y: 410, width: 920, height: 80, title: 'Range Bar', closable: true, lockable: true });
+
+  // ── Controls window ──
+  wm.createWindow('controls', { x: 720, y: 20, width: 220, title: 'Controls', closable: true, lockable: true });
+  wm.getBody('controls').innerHTML = `<div class="ctrl-grid">
+    <button onclick="pushData()">Push Data</button>
+    <button onclick="pushMessage()">Push Message</button>
+    <button onclick="toggleArrow()">Toggle Arrows</button>
+    <button onclick="cycleTheme()">Cycle Theme</button>
+    <button onclick="connectWS()">Connect WS</button>
+  </div>`;
+
+  // ── Seed data ──
+  ticker.update([
+    { label: 'AAPL', value: '$189.50', className: 'mt-green' },
+    { label: 'GOOG', value: '$141.20', className: 'mt-red' },
+    { label: 'TSLA', value: '$248.10', className: 'mt-green' },
+    { label: 'NVDA', value: '$721.30', className: 'mt-yellow' },
+  ]);
+
+  let val = 100;
+  const seed = [];
+  for (let i = 0; i < 80; i++) { val += (Math.random() - 0.48) * 3; seed.push(val); }
+  chart.update(seed);
+
+  log.update([
+    { text: 'System initialized', type: 'info', timestamp: '00:00' },
+    { text: 'Threshold exceeded on sensor A', type: 'good', timestamp: '00:01' },
+    { text: 'Connection lost to node 3', type: 'bad', timestamp: '00:02' },
+    { text: 'Processed 500 events', type: 'trade', timestamp: '00:03' },
+    { text: 'New device registered', type: 'listing', timestamp: '00:04' },
+  ]);
+
+  bars.randomize();
+
+  rb.update({
+    lo: 0, hi: 100,
+    markers: [
+      { position: 25, label: 'Min', type: 'default' },
+      { position: 72, label: 'Current', type: 'current', className: 'mt-pb-current' },
+      { position: 90, label: 'Limit', type: 'danger', className: 'mt-pb-danger' },
+    ],
+    zones: [{ from: 85, to: 100, className: 'mt-red' }],
+  });
+
+  // ── Welcome modal ──
+  modal.show(`
+    <div class="mt-modal-body" style="line-height:1.6;font-size:13px">
+      <div style="margin-bottom:8px;color:var(--mt-accent-bright)">Keyboard Shortcuts</div>
+      <div><span class="mt-yellow">Ctrl+1</span> &ndash; <span class="mt-yellow">Ctrl+5</span> &mdash; Save layout snapshot</div>
+      <div><span class="mt-yellow">1</span> &ndash; <span class="mt-yellow">5</span> &mdash; Restore layout snapshot</div>
+      <div><span class="mt-yellow">Escape</span> &mdash; Close all windows</div>
+      <div style="margin-top:10px;color:var(--mt-accent-bright)">Window Controls</div>
+      <div><svg viewBox="0 0 16 16" width="10" height="10" fill="currentColor" style="vertical-align:middle;opacity:.5"><path d="M9 1C9 .4 8.6 0 8 0S7 .4 7 1v4L4.5 6.5 4 7v1.5l3-.5V15l1 1 1-1V8l3 .5V7l-.5-.5L9 5V1z"/></svg> Pin button &mdash; Lock a window in place</div>
+      <div><span class="mt-dim">&#x2715;</span> Close button &mdash; Remove a window</div>
+      <div style="margin-top:10px;color:var(--mt-accent-bright)">Layout Bar</div>
+      <div>Click a slot to restore &mdash; <span class="mt-yellow">Ctrl+click</span> to save</div>
+      <div style="margin-top:12px">
+        <button class="mt-btn" onclick="this.closest('.mt-win').querySelector('.mt-win-close').click()">Got it</button>
+      </div>
+    </div>
+  `, { title: 'minterm', width: 360 });
+
+  // ── Controls ──
+  let arrowOn = false;
+  const themeNames = ['cyber', 'amber', 'phosphor', 'hotline', 'ice', 'slate'];
+  let themeIdx = 0;
+
+  window.pushData = () => { val += (Math.random() - 0.48) * 3; chart.push(val); };
+
+  window.pushMessage = () => {
+    const types = ['info', 'good', 'bad', 'trade', 'listing'];
+    const texts = ['Event received', 'Alert cleared', 'Error detected', 'Batch processed', 'Node joined'];
+    log.push({
+      text: texts[Math.floor(Math.random() * texts.length)],
+      type: types[Math.floor(Math.random() * types.length)],
+      timestamp: new Date().toLocaleTimeString(),
+    });
+  };
+
+  window.toggleArrow = () => {
+    arrowOn = !arrowOn;
+    if (arrowOn) {
+      arrows.setArrow('a1', { fromWindow: 'ticker', toWindow: 'chart', progress: 0.4, label: '500 req/s', color: '#0ff' });
+      arrows.setArrow('a2', { fromWindow: 'chart', toWindow: 'messages', progress: 0.7, label: '2.5 MB', color: '#f80' });
+    } else {
+      arrows.clearArrows();
+    }
+  };
+
+  window.cycleTheme = () => {
+    themeIdx = (themeIdx + 1) % themeNames.length;
+    applyTheme(themeNames[themeIdx]);
+  };
+
+  // ── WebSocket demo ──
+  let ws = null;
+  window.connectWS = () => {
+    if (ws) { ws.disconnect(); ws = null; log.push({ text: 'WS disconnected', type: 'info', timestamp: new Date().toLocaleTimeString() }); return; }
+    ws = new WebSocketAdapter('wss://stream.binance.com:9443/ws/btcusdt@trade', {
+      throttle: 16,
+      transform: (raw) => ({ value: parseFloat(raw.p) }),
+    });
+    ws.on('data', (d) => {
+      chart.push(d.value);
+      ticker.update([{ label: 'LIVE', value: formatNum(d.value), className: d.value > val ? 'mt-green' : 'mt-red' }]);
+    });
+    ws.connect();
+    log.push({ text: 'WS connected', type: 'good', timestamp: new Date().toLocaleTimeString() });
+  };
+
+  // Auto-generate data every 100ms
+  setInterval(() => { if (!ws) { val += (Math.random() - 0.48) * 0.5; chart.push(val); } }, 100);
+</script>
+
+</body>
+</html>
